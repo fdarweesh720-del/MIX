@@ -6,7 +6,7 @@
     <!-- Updated version title for Commercial & Scientific edition -->
     <title>MasterFormulator Pro v5.0 - Commercial & Scientific Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" onerror="window.CHART_FAILED=true"></script>
     <style>
         * {
             margin: 0;
@@ -238,6 +238,20 @@
             transition: all 0.3s ease;
         }
 
+        .material-lib-item.upt-highlight {
+            border-left-color: var(--yellow);
+            box-shadow: 0 0 12px rgba(255, 204, 0, 0.25);
+        }
+
+        .material-lib-item .upt-tag {
+            background: rgba(255, 204, 0, 0.2);
+            color: var(--yellow);
+            padding: 0.1rem 0.4rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            margin-left: 0.4rem;
+        }
+
         .material-lib-item:hover {
             background: rgba(0, 240, 255, 0.1);
             transform: translateX(5px);
@@ -283,6 +297,11 @@
             border-left: 4px solid var(--cyan);
         }
 
+        .material-card.upt-highlight {
+            border-left-color: var(--yellow);
+            box-shadow: 0 0 16px rgba(255, 204, 0, 0.25);
+        }
+
         .material-header {
             display: flex;
             justify-content: space-between;
@@ -300,6 +319,23 @@
             color: white;
             padding: 0.3rem 0.6rem;
             font-size: 0.75rem;
+        }
+
+        .ratio-controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .material-search-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .material-search-bar input {
+            flex: 1;
         }
 
         .chart-container {
@@ -609,6 +645,9 @@
         .type-silica { border-left-color: #00f0ff !important; }
         .type-aggregate { border-left-color: #a855f7 !important; }
         .type-other { border-left-color: #ffcc00 !important; }
+        .type-polymer { border-left-color: #4fc3f7 !important; }
+        .type-additive { border-left-color: #9ef01a !important; }
+        .type-fiber { border-left-color: #ff8fab !important; }
 
         /* Smart suggestions */
         .suggestion-box {
@@ -750,7 +789,7 @@
                 <strong>Target Product:</strong> <span id="productName">Tile Adhesive</span><br>
                 <strong>Target q-value:</strong> <span id="targetQ">0.25</span><br>
                 <strong>Application:</strong> <span id="productDesc">Cementitious tile adhesive for ceramic & porcelain</span>
-                <strong>Current Sieves:</strong> <span id="sievesInfo">4.0, 2.0, 1.0, 0.5, 0.25, 0.125, 0.063, 0.032, 0.016, 0.008 mm</span>
+                <strong>Current Sieves:</strong> <span id="sievesInfo">4.0 mm, 2.0 mm, 1.0 mm, 0.5 mm, 0.25 mm, 0.125 mm, 63 µm, 32 µm, 16 µm, 8 µm</span>
             </div>
 
             <div class="form-group">
@@ -815,9 +854,13 @@
             </div>
 
             <div class="scrollable">
-                <label>Material Library 
+                <label>Material Library
                     <button class="btn-small" onclick="showCustomMaterialModal()" style="margin-left: 1rem; background: var(--yellow); color: var(--bg-dark);">+ Add Custom Material</button>
                 </label>
+                <div class="material-search-bar">
+                    <input type="text" id="materialSearch" placeholder="ابحث عن المادة أو أضف أخرى" oninput="setMaterialSearch(this.value)">
+                    <button class="btn-small" onclick="showCustomMaterialModal()" style="background: var(--green); color: var(--bg-dark);">أخرى / إضافة</button>
+                </div>
                 <div class="material-library" id="materialLibrary"></div>
             </div>
         </div>
@@ -941,6 +984,22 @@
                 particleShapes: 'Spherical (better flow) vs. Angular (better packing)',
                 packingInfluence: 'Fine fillers improve packing density by filling voids'
             },
+            polymers: {
+                description: 'Redispersible powders، سليلوز إيثر، ومعدلات ريوولوجيا للتحكم بالالتصاق، المرونة، واللزوجة.',
+                typicalFunctions: [
+                    'رفع الالتصاق والمرونة في الخلطات',
+                    'منع الانزلاق وزيادة زمن الفتح',
+                    'تحسين الاحتفاظ بالماء والقابلية للتشغيل'
+                ]
+            },
+            fibers: {
+                description: 'ألياف بوليمرية وزجاجية للتحكم بالتشققات وتحسين المتانة.',
+                typicalFunctions: [
+                    'تحكم بتشققات الانكماش',
+                    'زيادة المتانة ومقاومة الصدمات',
+                    'تحسين الترابط في الطبقات الرفيعة'
+                ]
+            },
             silica: {
                 description: 'Siliceous materials providing strength, durability, and workability',
                 types: {
@@ -1046,142 +1105,104 @@
         // Material Database from Universal Paint Technologies inventory
         const MATERIAL_DATABASE = {
             binders: [
-                { 
-                    name: 'ARABIC White Cement 32.5', 
-                    category: 'Binder', 
-                    d50: 15, 
-                    fineness: 85, 
-                    color: '#f5f5f5',
-                    scientificInfo: 'Portland cement with low iron content (<0.5%), provides whiteness and early strength',
-                    typicalUse: 'Tile adhesives, grouts, decorative mortars',
-                    cost: 'Medium'
-                },
-                { 
-                    name: 'NORTHERN WHITE CEMENT 42.5', 
-                    category: 'Binder', 
-                    d50: 12, 
-                    fineness: 90, 
-                    color: '#f5f5f5',
-                    scientificInfo: 'Higher strength class, faster setting, better durability',
-                    typicalUse: 'High-performance mortars, repair compounds',
-                    cost: 'High'
-                },
-                { 
-                    name: 'CEMENTRA PORTLAND POZZOLANA BLACK CEMENT 42.5', 
-                    category: 'Binder', 
-                    d50: 12, 
-                    fineness: 88, 
-                    color: '#2a2a2a',
-                    scientificInfo: 'Blended cement with pozzolan (20-30%), reduced heat of hydration',
-                    typicalUse: 'General construction, mass concrete',
-                    cost: 'Low'
-                },
-                { 
-                    name: 'CIMSA ISIDAC 40 CALCIUM ALUMINATE CEMENT', 
-                    category: 'Binder', 
-                    d50: 8, 
-                    fineness: 95, 
-                    color: '#e8e8e8',
-                    scientificInfo: 'Rapid hardening, chemical resistance, high early strength',
-                    typicalUse: 'Repair mortars, refractory applications',
-                    cost: 'Very High'
-                }
+                { name: 'ARABIC White Cement Green Pack 32.5', category: 'Binder', d50: 15, fineness: 88, color: '#f5f5f5', scientificInfo: 'Low-iron white clinker for aesthetic mortars', typicalUse: 'Tile adhesives, grouts, renders', cost: 'Medium', price: null },
+                { name: 'ARABIC White Cement Blue Pack 42.5', category: 'Binder', d50: 13, fineness: 90, color: '#f5f5f5', scientificInfo: 'Higher strength white cement for demanding finishes', typicalUse: 'High-strength mortars, repair', cost: 'Medium', price: null },
+                { name: 'ARABIC White Cement 52.5', category: 'Binder', d50: 11, fineness: 92, color: '#f5f5f5', scientificInfo: 'Premium strength class for structural grouts', typicalUse: 'Anchoring grouts, structural repair', cost: 'High', price: null },
+                { name: 'NORTHERN White Cement 32.5', category: 'Binder', d50: 15, fineness: 88, color: '#f4f4f4', scientificInfo: 'Balanced early strength with bright color', typicalUse: 'Decorative renders, adhesives', cost: 'Medium', price: null },
+                { name: 'NORTHERN White Cement 42.5', category: 'Binder', d50: 13, fineness: 90, color: '#f4f4f4', scientificInfo: 'Strengthened white clinker for performance mortars', typicalUse: 'Self-levellers, grouts', cost: 'Medium', price: null },
+                { name: 'NORTHERN White Cement 52.5', category: 'Binder', d50: 11, fineness: 92, color: '#f4f4f4', scientificInfo: 'High-alumina white clinker for rapid gain', typicalUse: 'Fast repairs, precision grouts', cost: 'High', price: null },
+                { name: 'Manaseer White Cement Orange Pack 32.5', category: 'Binder', d50: 15, fineness: 88, color: '#f6f6f6', scientificInfo: 'Bright white binder with controlled setting time', typicalUse: 'Wall putty, adhesives', cost: 'Medium', price: null },
+                { name: 'Manaseer White Cement Green Pack 42.5', category: 'Binder', d50: 13, fineness: 90, color: '#f6f6f6', scientificInfo: 'Improved strength for versatile mortars', typicalUse: 'Tile adhesives, mortars', cost: 'Medium', price: null },
+                { name: 'CEMENTRA Portland Pozzolana Black Cement 42.5', category: 'Binder', d50: 12, fineness: 88, color: '#2b2b2b', scientificInfo: 'Pozzolanic blend reduces heat and enhances durability', typicalUse: 'General construction, thick sections', cost: 'Low', price: null },
+                { name: 'NORTHERN Portland Pozzoland Black Cement 42.5', category: 'Binder', d50: 12, fineness: 88, color: '#2b2b2b', scientificInfo: 'Pozzolan cement with improved sulfate resistance', typicalUse: 'Structural concrete, mortars', cost: 'Low', price: null },
+                { name: 'MANASEER Portland Pozzolana Black Cement 42.5', category: 'Binder', d50: 12, fineness: 88, color: '#2b2b2b', scientificInfo: 'Blended cement with stable heat profile', typicalUse: 'General use mortars, grouts', cost: 'Low', price: null },
+                { name: 'QATRANAH Portland Pozzolana Black Cement 42.5', category: 'Binder', d50: 12, fineness: 88, color: '#2b2b2b', scientificInfo: 'Pozzolanic cement tuned for durability and low permeability', typicalUse: 'Infrastructure, mortars', cost: 'Low', price: null },
+                { name: 'CIMSA ISIDAC 40 Calcium Aluminate Cement', category: 'Binder', d50: 8, fineness: 95, color: '#ededed', scientificInfo: 'Rapid hardening alumina cement with chemical resistance', typicalUse: 'Refractory and fast repair systems', cost: 'Very High', price: null },
+                { name: 'SHOBASKI Hydrated Lime (MASA)', category: 'Binder', d50: 6, fineness: 98, color: '#f7f7f1', scientificInfo: 'High-purity hydrated lime for plasticity and workability', typicalUse: 'Plasters, putties, masonry mortar', cost: 'Low', price: null },
+                { name: 'SHOBASKI Live Lime', category: 'Binder', d50: 5, fineness: 98, color: '#f7f7f1', scientificInfo: 'Quicklime for in situ slaking and tailored rheology', typicalUse: 'Traditional mortars, specialty plasters', cost: 'Low', price: null },
+                { name: 'BELADI Steel Slag', category: 'Binder', d50: 25, fineness: 75, color: '#3a3a3a', scientificInfo: 'Granulated slag with latent hydraulic activity', typicalUse: 'Eco-binders, ground improvements', cost: 'Low', price: null },
+                { name: 'SHOBASKI Mix Slag', category: 'Binder', d50: 30, fineness: 72, color: '#404040', scientificInfo: 'Mixed slag blend for gradual strength gain', typicalUse: 'Mass concrete, grout blends', cost: 'Low', price: null },
+                { name: 'MEREN Fly Ash Basalt', category: 'Binder', d50: 20, fineness: 85, color: '#2f2f2f', scientificInfo: 'Basaltic fly ash offering pozzolanic contribution', typicalUse: 'Durable concrete, mortars', cost: 'Low', price: null },
+                { name: 'MEREN Fly Ash Pozzolana', category: 'Binder', d50: 18, fineness: 88, color: '#3a3a3a', scientificInfo: 'Fine pozzolanic ash enhancing workability and strength', typicalUse: 'Adhesives, grouts, concretes', cost: 'Low', price: null },
+                { name: 'MEREN Fly Ash Pozzolana – Silica', category: 'Binder', d50: 12, fineness: 90, color: '#3a3a3a', scientificInfo: 'Silica-rich fly ash for dense packing and pozzolanic reaction', typicalUse: 'High-performance mortars', cost: 'Medium', price: null },
+                { name: 'MEREN Kaolin', category: 'Binder', d50: 4, fineness: 97, color: '#f5efe5', scientificInfo: 'Refined kaolin improving whiteness and rheology', typicalUse: 'Wall putty, specialty mortars', cost: 'Medium', price: null },
+                { name: 'ASHAPURA Calcined Kaolin (عدة درجات)', category: 'Binder', d50: 3.5, fineness: 97, color: '#f2ece2', scientificInfo: 'Calcined kaolin for pozzolanic response and opacity', typicalUse: 'White mortars, coatings', cost: 'Medium', price: null },
+                { name: 'UNI-MIN India Calcined Kaolin 9.1', category: 'Binder', d50: 3.5, fineness: 97, color: '#f2ece2', scientificInfo: 'High-reactivity calcined kaolin with consistent PSD', typicalUse: 'High-grade wall putty, repair', cost: 'Medium', price: null }
             ],
-            fillers: [
-                { 
-                    name: 'JORDAN CARBONATE JC 2F', 
-                    category: 'Filler', 
-                    d50: 2, 
-                    fineness: 99, 
-                    color: '#ffffff',
-                    scientificInfo: 'Ultra-fine precipitated calcium carbonate, high brightness (>95%)',
-                    typicalUse: 'High-quality paints, plasters, sealants',
-                    cost: 'Medium'
-                },
-                { 
-                    name: 'JORDAN CARBONATE JORCAL 15 X', 
-                    category: 'Filler', 
-                    d50: 15, 
-                    fineness: 92, 
-                    color: '#ffffff',
-                    scientificInfo: 'Ground limestone, improves workability and reduces shrinkage',
-                    typicalUse: 'Tile adhesives, mortars, concrete',
-                    cost: 'Low'
-                },
-                { 
-                    name: 'GREEN EGYPT - ET5M TALC', 
-                    category: 'Filler', 
-                    d50: 5, 
-                    fineness: 98, 
-                    color: '#e8f5e8',
-                    scientificInfo: 'Hydrated magnesium silicate, plate-like structure, anti-sag properties',
-                    typicalUse: 'Tile adhesives, joint compounds',
-                    cost: 'Medium'
-                },
-                { 
-                    name: 'MANASEER BASALT 0 - 2 MM', 
-                    category: 'Filler', 
-                    d50: 1000, 
-                    fineness: 20, 
-                    color: '#3a3a3a',
-                    scientificInfo: 'Volcanic rock, high density (2.8-3.0 g/cm³), excellent durability',
-                    typicalUse: 'Heavy-duty mortars, industrial floors',
-                    cost: 'Low'
-                }
+            fillers: [],
+            polymers: [
+                { name: 'WACKER VINNAPAS EP 3360 (BGH)', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'Redispersible polymer with strong adhesion and flexibility', typicalUse: 'Tile adhesives, EIFS basecoats', cost: 'High', price: null },
+                { name: 'WACKER VINNAPAS 5043 N', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'General-purpose RDP for flexible mortars', typicalUse: 'Render, repair, adhesives', cost: 'Medium', price: null },
+                { name: 'WACKER VINNAPAS 5044 N', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'Improved cohesion and water retention', typicalUse: 'Wall putty, grouts', cost: 'Medium', price: null },
+                { name: 'WACKER VINNAPAS 5111 L', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'Low-emission RDP with enhanced flexibility', typicalUse: 'Premium tile adhesives', cost: 'High', price: null },
+                { name: 'WACKER VINNAPAS 5010 N', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'Versatile RDP for strong adhesion and workability', typicalUse: 'Joint fillers, adhesives', cost: 'Medium', price: null },
+                { name: 'WACKER VINNAPAS 8034 H', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'Hydrophobic grade improving water resistance', typicalUse: 'Waterproof mortars', cost: 'High', price: null },
+                { name: 'WACKER VINNAPAS 550 ED', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'Elastic polymer powder for deformable adhesives', typicalUse: 'C2 tile adhesives', cost: 'High', price: null },
+                { name: 'WACKER VINNAPAS 7034 E', category: 'Polymer', d50: 80, fineness: 92, color: '#f8f7f3', scientificInfo: 'High flexibility and open time', typicalUse: 'Exterior adhesives, renders', cost: 'High', price: null },
+                { name: 'AKZONOBEL Bermocoll EBS 481 FQ', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Cellulose ether delivering water retention and slip resistance', typicalUse: 'Tile adhesives, plasters', cost: 'High', price: null },
+                { name: 'AKZONOBEL Bermocoll EM 7000 FQ', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'High-viscosity cellulose for sag control', typicalUse: 'Thick-bed mortars, renders', cost: 'High', price: null },
+                { name: 'AKZONOBEL Bermocoll ML 11', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Mid-viscosity cellulose improving workability', typicalUse: 'Wall putty, grouts', cost: 'Medium', price: null },
+                { name: 'AKZONOBEL Bermocoll ML 71', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Enhanced water retention with smooth finish', typicalUse: 'Finishing coats', cost: 'Medium', price: null },
+                { name: 'NOURYON Bermocoll ML 31', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Efficient cellulose ether for open time extension', typicalUse: 'Tile adhesives', cost: 'Medium', price: null },
+                { name: 'NOURYON Bermocoll EBM 10000', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'High-viscosity cellulose for premium thixotropy', typicalUse: 'Vertical renders, adhesives', cost: 'High', price: null },
+                { name: 'SE TYLOSE H 300 P2', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'HEMC grade with balanced water retention', typicalUse: 'Tile adhesive, skim coats', cost: 'Medium', price: null },
+                { name: 'SE TYLOSE H 20003 YP2', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'High-viscosity cellulose for anti-sag', typicalUse: 'Thick renders', cost: 'Medium', price: null },
+                { name: 'TYLOSE MH6000 YP4', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Methyl hydroxyethyl cellulose with strong open time', typicalUse: 'Tile adhesives', cost: 'Medium', price: null },
+                { name: 'DOW WALOCEL MKS 20000', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'High viscosity cellulose for rheology build', typicalUse: 'Mortars needing sag resistance', cost: 'High', price: null },
+                { name: 'DOW WALOCEL MKX 25000', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Very high viscosity cellulose for extreme thixotropy', typicalUse: 'Marble adhesives, specialty mortars', cost: 'High', price: null },
+                { name: 'ASHLAND NATROSOL 250 HRPR', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'HEC providing consistency and water retention', typicalUse: 'Joint compounds, plasters', cost: 'Medium', price: null },
+                { name: 'ASHLAND NATROVIS 200000', category: 'Polymer', d50: 60, fineness: 95, color: '#f9fafb', scientificInfo: 'Ultra-high viscosity cellulose for supreme sag control', typicalUse: 'Heavy tile adhesives', cost: 'High', price: null },
+                { name: 'ELEMENTIS THIXIC R', category: 'Additive', d50: 20, fineness: 85, color: '#eceff1', scientificInfo: 'Organic rheology modifier enhancing structure', typicalUse: 'Coatings and mortars needing thixotropy', cost: 'Medium', price: null },
+                { name: 'ELEMENTIS BENTONE 30', category: 'Additive', d50: 15, fineness: 88, color: '#eceff1', scientificInfo: 'Organoclay for gelling and sag resistance', typicalUse: 'High-build renders', cost: 'Medium', price: null },
+                { name: 'ELEMENTIS BENTONE 38', category: 'Additive', d50: 15, fineness: 88, color: '#eceff1', scientificInfo: 'Organoclay for solvent-free systems', typicalUse: 'Epoxy and cement hybrids', cost: 'Medium', price: null },
+                { name: 'ELEMENTIS Rheolate 212', category: 'Additive', d50: 10, fineness: 90, color: '#eceff1', scientificInfo: 'Associative thickener with strong shear response', typicalUse: 'Self-levelling and spray mortars', cost: 'Medium', price: null },
+                { name: 'ELEMENTIS Thixatrol AS', category: 'Additive', d50: 18, fineness: 85, color: '#eceff1', scientificInfo: 'Polyamide rheology modifier for anti-sag', typicalUse: 'High-build coatings and mortars', cost: 'High', price: null },
+                { name: 'BYK RHEOBYK L 1400 VF', category: 'Additive', d50: 12, fineness: 90, color: '#eef1f5', scientificInfo: 'Liquid rheology additive improving anti-settling', typicalUse: 'Cementitious primers and slurries', cost: 'High', price: null },
+                { name: 'BYK GARAMITE 1958', category: 'Additive', d50: 18, fineness: 85, color: '#eef1f5', scientificInfo: 'Organo-clay hybrid for efficient thixotropy', typicalUse: 'Mortars needing storage stability', cost: 'Medium', price: null },
+                { name: 'ARKEMA CRAYVALLAC SLX', category: 'Additive', d50: 14, fineness: 88, color: '#f1f4f8', scientificInfo: 'Polyamide rheology modifier for silky finishes', typicalUse: 'Decorative mortars', cost: 'Medium', price: null },
+                { name: 'ARKEMA CRAYVALLAC SLT', category: 'Additive', d50: 14, fineness: 88, color: '#f1f4f8', scientificInfo: 'Temperature-stable rheology modifier', typicalUse: 'Hot climate mortars', cost: 'Medium', price: null },
+                { name: 'MATECEL KYOTO 50 / 300', category: 'Additive', d50: 25, fineness: 85, color: '#f9fafb', scientificInfo: 'Cellulosic additive for controlled water retention', typicalUse: 'Tile adhesives and renders', cost: 'Medium', price: null },
+                { name: 'COATEX BR100P', category: 'Additive', d50: 10, fineness: 90, color: '#eef1f5', scientificInfo: 'Polymer dispersant improving flow', typicalUse: 'Self-levelling mortars', cost: 'Medium', price: null },
+                { name: 'BASF RHEOVIS PE 1330', category: 'Additive', d50: 10, fineness: 90, color: '#eef1f5', scientificInfo: 'Associative thickener for stable rheology', typicalUse: 'Joint compounds, plasters', cost: 'Medium', price: null },
+                { name: 'BASF ASP G 90', category: 'Additive', d50: 6, fineness: 95, color: '#eef1f5', scientificInfo: 'Surface-treated silica for rheology and matting', typicalUse: 'Thin coats needing structure', cost: 'Medium', price: null },
+                { name: 'BASF ULTREX 96', category: 'Additive', d50: 9, fineness: 92, color: '#eef1f5', scientificInfo: 'High-surface-area silica enhancing thixotropy', typicalUse: 'Non-sag mortars', cost: 'Medium', price: null },
+                { name: 'EVONIK SIPERNAT 820 A', category: 'Additive', d50: 7, fineness: 95, color: '#f5f7fa', scientificInfo: 'Precipitated silica for flow and anti-caking', typicalUse: 'Drymix flow improvement', cost: 'Medium', price: null },
+                { name: 'REAKSIYON KIMYA REAXCELL 15 M HP', category: 'Additive', d50: 14, fineness: 90, color: '#f5f7fa', scientificInfo: 'Redispersible polymer improving adhesion', typicalUse: 'Flexible mortars', cost: 'Medium', price: null },
+                { name: 'REAKSIYON KIMYA REMULSION WAX RP10', category: 'Additive', d50: 14, fineness: 90, color: '#f5f7fa', scientificInfo: 'Waxy additive for hydrophobicity and slip', typicalUse: 'Water-resistant renders', cost: 'Medium', price: null }
             ],
             silica: [
-                { 
-                    name: 'WAHAT RAYAN SILICA SAND 0-300 MIC', 
-                    category: 'Silica', 
-                    d50: 150, 
-                    fineness: 72, 
-                    color: '#f0e68c',
-                    scientificInfo: 'High-purity quartz sand (>98% SiO₂), rounded particles',
-                    typicalUse: 'Tile adhesives, epoxy flooring, filtration',
-                    cost: 'Medium'
-                },
-                { 
-                    name: 'WATAD MICRO SILICA - LIGHT GREY', 
-                    category: 'Silica', 
-                    d50: 0.2, 
-                    fineness: 99.9, 
-                    color: '#d3d3d3',
-                    scientificInfo: 'Amorphous silica byproduct, pozzolanic activity, fills micro-voids',
-                    typicalUse: 'High-performance concrete, repair mortars',
-                    cost: 'High'
-                }
+                { name: 'WATAD Micro Silica – Light Grey', category: 'Silica', d50: 0.2, fineness: 99.9, color: '#d3d3d3', scientificInfo: 'Amorphous silica, high pozzolanic reactivity', typicalUse: 'High-performance concrete and repair', cost: 'High', price: null },
+                { name: 'WATAD Micro Silica', category: 'Silica', d50: 0.3, fineness: 99.5, color: '#d3d3d3', scientificInfo: 'Condensed silica fume improving density', typicalUse: 'Dense mortars, grouts', cost: 'High', price: null },
+                { name: 'EVONIK AEROSIL 200', category: 'Silica', d50: 0.12, fineness: 99.9, color: '#f2f2f2', scientificInfo: 'Fumed silica for thixotropy and matting', typicalUse: 'Non-sag mortars, coatings', cost: 'Very High', price: null },
+                { name: 'EVONIK AEROSIL R 972', category: 'Silica', d50: 0.12, fineness: 99.9, color: '#f2f2f2', scientificInfo: 'Hydrophobic fumed silica for water repellency', typicalUse: 'Hydrophobic mortars', cost: 'Very High', price: null },
+                { name: 'EVONIK AEROSIL R 106', category: 'Silica', d50: 0.12, fineness: 99.9, color: '#f2f2f2', scientificInfo: 'Surface-treated fumed silica with controlled rheology', typicalUse: 'Premium adhesives', cost: 'Very High', price: null },
+                { name: 'UPT Silica Sand 0–1000 Mic', category: 'Silica', d50: 500, fineness: 70, color: '#f3e9d2', scientificInfo: 'UPT graded silica sand covering full spectrum to 1 mm', typicalUse: 'General mortars and grouts', cost: 'Medium', price: null },
+                { name: 'UPT Silica Sand 0–425 Mic', category: 'Silica', d50: 210, fineness: 78, color: '#f3e9d2', scientificInfo: 'UPT fine silica sand targeting sub-0.5 mm', typicalUse: 'Tile adhesives, renders', cost: 'Medium', price: null },
+                { name: 'UPT Silica Sand 425–1000 Mic', category: 'Silica', d50: 700, fineness: 60, color: '#f3e9d2', scientificInfo: 'Coarse silica fraction for packing density', typicalUse: 'Flooring mortars', cost: 'Medium', price: null },
+                { name: 'UPT Grey Silica Sand 425–1000 Mic', category: 'Silica', d50: 700, fineness: 60, color: '#d9d0c3', scientificInfo: 'Grey-toned silica with angular profile', typicalUse: 'Industrial mortars', cost: 'Low', price: null },
+                { name: 'UPT Grey Silica Sand 0–425 Mic', category: 'Silica', d50: 210, fineness: 78, color: '#d9d0c3', scientificInfo: 'Grey silica fines for workability', typicalUse: 'Renders, adhesives', cost: 'Low', price: null },
+                { name: 'INTERNATIONAL Silica Sand (عدة مقاسات)', category: 'Silica', d50: 400, fineness: 70, color: '#efe2c8', scientificInfo: 'Imported silica across multiple grades', typicalUse: 'Versatile mortar blends', cost: 'Medium', price: null },
+                { name: 'SHOBASKI Silica Sand (0–75 / 0–150 / 0–600 Mic)', category: 'Silica', d50: 200, fineness: 80, color: '#efe2c8', scientificInfo: 'Local silica with consistent moisture control', typicalUse: 'Adhesives and plasters', cost: 'Medium', price: null },
+                { name: 'MEREN Silica Sand (عدة مقاسات)', category: 'Silica', d50: 300, fineness: 75, color: '#efe2c8', scientificInfo: 'MEREN graded silica for controlled packing', typicalUse: 'Grouts, renders', cost: 'Medium', price: null },
+                { name: 'WATAD Silica Sand (عدة مقاسات)', category: 'Silica', d50: 300, fineness: 75, color: '#efe2c8', scientificInfo: 'Multiple sieve cuts for flexible blending', typicalUse: 'Mortars and screeds', cost: 'Medium', price: null },
+                { name: 'ABU OSBA Silica Sand', category: 'Silica', d50: 320, fineness: 72, color: '#e8dcc6', scientificInfo: 'Regional silica with rounded grains', typicalUse: 'General purpose mortars', cost: 'Low', price: null },
+                { name: 'HABHBEH Silica', category: 'Silica', d50: 250, fineness: 78, color: '#e8dcc6', scientificInfo: 'High-silica sand with low impurities', typicalUse: 'Tile adhesives, renders', cost: 'Low', price: null },
+                { name: 'KAYAN Silica', category: 'Silica', d50: 250, fineness: 78, color: '#e8dcc6', scientificInfo: 'Silica sand suited for consistent flow', typicalUse: 'Drymix mortars', cost: 'Low', price: null },
+                { name: 'Chinese Glass Beads (180–300 Micron)', category: 'Silica', d50: 240, fineness: 60, color: '#e0ffff', scientificInfo: 'Spherical glass beads reducing density and improving flow', typicalUse: 'Lightweight mortars, traffic coatings', cost: 'High', price: null },
+                { name: 'Glass Beads 100–200 Mesh', category: 'Silica', d50: 170, fineness: 65, color: '#e0ffff', scientificInfo: 'Uniform glass beads for reflective and flow enhancement', typicalUse: 'Grouts and specialty mortars', cost: 'High', price: null },
+                { name: 'UPT Silica 325 Mesh', category: 'Silica', d50: 45, fineness: 96, color: '#f8f3e6', scientificInfo: 'UPT screened silica flour for consistent packing below 63µm', typicalUse: 'Adhesives, sealants, self-levellers', cost: 'Medium', price: null }
             ],
             aggregates: [
-                { 
-                    name: 'CHINESE GLASS BEADS (180-300) MICRON', 
-                    category: 'Aggregate', 
-                    d50: 240, 
-                    fineness: 60, 
-                    color: '#e0ffff',
-                    scientificInfo: 'Hollow glass spheres, reduce density, improve thermal insulation',
-                    typicalUse: 'Lightweight mortars, thermal insulation coatings',
-                    cost: 'High'
-                },
-                { 
-                    name: 'STW FIBER GLASS SHORT CUT FG 412 - 6 MM', 
-                    category: 'Aggregate', 
-                    d50: 6000, 
-                    fineness: 2, 
-                    color: '#ffffff',
-                    scientificInfo: 'E-glass fibers, aspect ratio ~200:1, crack bridging',
-                    typicalUse: 'Crack-resistant mortars, stucco',
-                    cost: 'Very High'
-                },
-                { 
-                    name: 'ALMAJED AGGREGATE 0-4 MM', 
-                    category: 'Aggregate', 
-                    d50: 2000, 
-                    fineness: 12, 
-                    color: '#8b7355',
-                    scientificInfo: 'Crushed limestone aggregate, well-graded, improves packing',
-                    typicalUse: 'Concrete, masonry mortar',
-                    cost: 'Very Low'
-                }
+                { name: 'UPT Light Glass Filler 0.5-1 MM', category: 'Aggregate', d50: 750, fineness: 55, color: '#f1f5f9', scientificInfo: 'UPT hollow glass aggregate for weight reduction and flow', typicalUse: 'Lightweight tile adhesives, insulating renders', cost: 'High', price: null },
+                { name: 'Basalt Grit 0-1 MM', category: 'Aggregate', d50: 600, fineness: 35, color: '#2f2f2f', scientificInfo: 'Angular basalt fines for interlock and slip resistance', typicalUse: 'Industrial flooring, repair grouts', cost: 'Medium', price: null }
+            ],
+            fibers: [
+                { name: 'STW Fiber Glass Short Cut (عدة أطوال)', category: 'Fiber', d50: 6000, fineness: 2, color: '#ffffff', scientificInfo: 'E-glass chopped strands for crack control', typicalUse: 'Crack-resistant mortars and stucco', cost: 'High', price: null },
+                { name: 'STW Fiber Polyester Cord Threads', category: 'Fiber', d50: 6000, fineness: 2, color: '#ffffff', scientificInfo: 'Polyester cords adding tensile reinforcement', typicalUse: 'Repair mortars', cost: 'Medium', price: null },
+                { name: 'STW PP Fiber (عدة درجات)', category: 'Fiber', d50: 5000, fineness: 2, color: '#ffffff', scientificInfo: 'Polypropylene fibers reducing plastic shrinkage', typicalUse: 'Floor screeds and renders', cost: 'Medium', price: null },
+                { name: 'STW FG Fiber', category: 'Fiber', d50: 6000, fineness: 2, color: '#ffffff', scientificInfo: 'Fine glass fibers for surface reinforcement', typicalUse: 'Trowelable mortars', cost: 'High', price: null },
+                { name: 'PolyFibers Polymono (عدة أطوال)', category: 'Fiber', d50: 5000, fineness: 2, color: '#ffffff', scientificInfo: 'Mono-filament polymer fibers enhancing toughness', typicalUse: 'Lightweight mortars', cost: 'Medium', price: null },
+                { name: 'Polyethylene Fiber BELMIX 12', category: 'Fiber', d50: 12000, fineness: 2, color: '#fdfdfd', scientificInfo: 'Polyethylene fiber for crack control and toughness', typicalUse: 'Shotcrete, mortars', cost: 'Medium', price: null }
             ],
             other: [] // For custom materials
         };
@@ -1290,6 +1311,23 @@
             'Variable': 0.30
         };
 
+        let chartLoadAttempts = 0;
+
+        function installChartStub() {
+            if (window.Chart) return;
+            console.warn('Chart.js failed to load; using lightweight stub renderer.');
+            window.Chart = class {
+                constructor(ctx, config) {
+                    this.ctx = ctx;
+                    this.config = config || {};
+                    this.data = (config && config.data) || { datasets: [] };
+                    this.options = (config && config.options) || {};
+                }
+                update() {}
+                destroy() {}
+            };
+        }
+
         let state = {
             productType: 'tile_adhesive',
             qValue: 0.25,
@@ -1317,14 +1355,28 @@
             maxPrice: null
         };
 
+        const formatSieveLabel = (value) => {
+            if (value >= 1) {
+                return `${value.toFixed(3)} mm`;
+            }
+            return `${Math.round(value * 1000)} µm`;
+        };
+
         let materialIdCounter = 0;
         let additiveIdCounter = 0;
+        let materialSearchTerm = '';
+        let storedPSDProfiles = {};
 
         function init() {
             // Wait for Chart.js to load
             if (typeof Chart === 'undefined') {
-                setTimeout(init, 100);
-                return;
+                chartLoadAttempts++;
+                if (window.CHART_FAILED || chartLoadAttempts > 20) {
+                    installChartStub();
+                } else {
+                    setTimeout(init, 100);
+                    return;
+                }
             }
             
             // Load saved sieves from localStorage
@@ -1345,6 +1397,7 @@
             
             // Initialize pricing, load custom materials and price edits
             initializeFinancialEngine();
+            loadStoredPSDProfiles();
             loadCustomMaterials();
             setupNumberValidation();
             observeModals();
@@ -1388,7 +1441,8 @@
         function updateSievesInfo() {
             const sievesInfoEl = document.getElementById('sievesInfo');
             if (sievesInfoEl) {
-                sievesInfoEl.textContent = state.sieves.map(s => s.toFixed(3)).join(', ') + ' mm';
+                const parts = state.sieves.map(formatSieveLabel);
+                sievesInfoEl.textContent = parts.join(', ');
             }
         }
 
@@ -1523,7 +1577,7 @@
                 return;
             }
             
-            if (confirm(`Delete sieve ${state.sieves[index].toFixed(3)} mm?`)) {
+            if (confirm(`Delete sieve ${formatSieveLabel(state.sieves[index])}?`)) {
                 state.sieves.splice(index, 1);
                 updateSievesUI();
                 showToast('Sieve deleted', 'success');
@@ -1533,11 +1587,11 @@
         function updateSievesUI() {
             const sievesList = document.getElementById('sievesList');
             if (!sievesList) return;
-            
+
             sievesList.innerHTML = state.sieves.map((sieve, index) => `
                 <div class="sieve-item">
                     <div>
-                        <span class="sieve-value">${sieve.toFixed(3)} mm</span>
+                        <span class="sieve-value">${formatSieveLabel(sieve)}</span>
                         <span style="font-size: 0.75rem; color: var(--text-dim); margin-left: 1rem;">
                             ${index === 0 ? '(الأكبر)' : index === state.sieves.length - 1 ? '(الأصغر)' : ''}
                         </span>
@@ -1944,52 +1998,91 @@
             updateSmartSuggestions();
         }
 
+        function setMaterialSearch(term) {
+            materialSearchTerm = (term || '').toLowerCase();
+            renderMaterialLibrary();
+        }
+
         function renderMaterialLibrary() {
             const container = document.getElementById('materialLibrary');
             let html = '';
-            
+
+            const filterMaterials = (list) => {
+                if (!materialSearchTerm) return list;
+                return list.filter(mat => mat.name.toLowerCase().includes(materialSearchTerm));
+            };
+
             // Binders
             html += `<h4 style="color: var(--orange); margin-top: 1rem;">Binders <span class="info-icon" onclick="showMaterialScience('binders')">i</span></h4>`;
-            MATERIAL_DATABASE.binders.forEach((mat, idx) => {
+            const binders = filterMaterials(MATERIAL_DATABASE.binders);
+            binders.forEach((mat, idx) => {
                 html += createLibraryItem(mat, 'binder_' + idx);
             });
-            
+            if (binders.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق، جرّب كلمة أخرى أو استخدم زر "أخرى / إضافة".</p>`;
+
             // Fillers
             html += `<h4 style="color: var(--green); margin-top: 1rem;">Fillers <span class="info-icon" onclick="showMaterialScience('fillers')">i</span></h4>`;
-            MATERIAL_DATABASE.fillers.forEach((mat, idx) => {
+            const fillers = filterMaterials(MATERIAL_DATABASE.fillers);
+            fillers.forEach((mat, idx) => {
                 html += createLibraryItem(mat, 'filler_' + idx);
             });
-            
+            if (fillers.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق.</p>`;
+
+            // Polymers & Rheology
+            html += `<h4 style="color: var(--purple); margin-top: 1rem;">Polymers / Rheology <span class="info-icon" onclick="showMaterialScience('polymers')">i</span></h4>`;
+            const polymers = filterMaterials(MATERIAL_DATABASE.polymers || []);
+            polymers.forEach((mat, idx) => {
+                html += createLibraryItem(mat, 'polymer_' + idx);
+            });
+            if (polymers.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق.</p>`;
+
             // Silica/Sand
             html += `<h4 style="color: var(--cyan); margin-top: 1rem;">Silica/Sand <span class="info-icon" onclick="showMaterialScience('silica')">i</span></h4>`;
-            MATERIAL_DATABASE.silica.forEach((mat, idx) => {
+            const silica = filterMaterials(MATERIAL_DATABASE.silica);
+            silica.forEach((mat, idx) => {
                 html += createLibraryItem(mat, 'silica_' + idx);
             });
-            
+            if (silica.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق.</p>`;
+
             // Aggregates
             html += `<h4 style="color: var(--purple); margin-top: 1rem;">Aggregates <span class="info-icon" onclick="showMaterialScience('aggregates')">i</span></h4>`;
-            MATERIAL_DATABASE.aggregates.forEach((mat, idx) => {
+            const aggregates = filterMaterials(MATERIAL_DATABASE.aggregates);
+            aggregates.forEach((mat, idx) => {
                 html += createLibraryItem(mat, 'aggregate_' + idx);
             });
-            
+            if (aggregates.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق.</p>`;
+
+            // Fibers
+            html += `<h4 style="color: var(--yellow); margin-top: 1rem;">Fibers <span class="info-icon" onclick="showMaterialScience('fibers')">i</span></h4>`;
+            const fibers = filterMaterials(MATERIAL_DATABASE.fibers || []);
+            fibers.forEach((mat, idx) => {
+                html += createLibraryItem(mat, 'fiber_' + idx);
+            });
+            if (fibers.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق.</p>`;
+
             // Custom Materials
             if (state.customMaterials.length > 0) {
                 html += `<h4 style="color: var(--yellow); margin-top: 1rem;">Custom Materials</h4>`;
-                state.customMaterials.forEach((mat, idx) => {
+                const customs = filterMaterials(state.customMaterials);
+                customs.forEach((mat, idx) => {
                     html += createLibraryItem(mat, 'custom_' + idx);
                 });
+                if (customs.length === 0) html += `<p style="font-size:0.85rem; color: var(--text-dim);">لا يوجد مطابق.</p>`;
             }
-            
+
             container.innerHTML = html;
         }
 
         function createLibraryItem(mat, id) {
             const typeClass = `type-${mat.category.toLowerCase()}`;
+            const isUpt = mat.name.trim().toUpperCase().startsWith('UPT');
+            const highlight = isUpt ? 'upt-highlight' : '';
+            const tag = isUpt ? '<span class="upt-tag">UPT</span>' : '';
             return `
-                <div class="material-lib-item ${typeClass}" onclick="showMaterialDetails('${id}')" 
+                <div class="material-lib-item ${typeClass} ${highlight}" onclick="showMaterialDetails('${id}')"
                      onmouseover="showMaterialTooltip('${id}', event)" onmouseout="hideMaterialTooltip()">
                     <div>
-                        <div class="name">${mat.name}</div>
+                        <div class="name">${mat.name} ${tag}</div>
                         <div class="category">${mat.category} | D50: ${mat.d50}µm | Fineness: ${mat.fineness}%</div>
                     </div>
                     <button class="btn-add-from-lib" onclick="event.stopPropagation(); addMaterialFromLibrary('${id}')">+ Add</button>
@@ -2031,11 +2124,13 @@
         function showMaterialDetails(id) {
             const [category, idx] = id.split('_');
             let mat;
-            
+
             if (category === 'binder') mat = MATERIAL_DATABASE.binders[parseInt(idx)];
             else if (category === 'filler') mat = MATERIAL_DATABASE.fillers[parseInt(idx)];
             else if (category === 'silica') mat = MATERIAL_DATABASE.silica[parseInt(idx)];
             else if (category === 'aggregate') mat = MATERIAL_DATABASE.aggregates[parseInt(idx)];
+            else if (category === 'polymer') mat = (MATERIAL_DATABASE.polymers || [])[parseInt(idx)];
+            else if (category === 'fiber') mat = (MATERIAL_DATABASE.fibers || [])[parseInt(idx)];
             else if (category === 'custom') mat = state.customMaterials[parseInt(idx)];
             
             if (!mat) return;
@@ -2085,11 +2180,13 @@
         function showMaterialTooltip(id, event) {
             const [category, idx] = id.split('_');
             let mat;
-            
+
             if (category === 'binder') mat = MATERIAL_DATABASE.binders[parseInt(idx)];
             else if (category === 'filler') mat = MATERIAL_DATABASE.fillers[parseInt(idx)];
             else if (category === 'silica') mat = MATERIAL_DATABASE.silica[parseInt(idx)];
             else if (category === 'aggregate') mat = MATERIAL_DATABASE.aggregates[parseInt(idx)];
+            else if (category === 'polymer') mat = (MATERIAL_DATABASE.polymers || [])[parseInt(idx)];
+            else if (category === 'fiber') mat = (MATERIAL_DATABASE.fibers || [])[parseInt(idx)];
             else if (category === 'custom') mat = state.customMaterials[parseInt(idx)];
             
             if (!mat) return;
@@ -2234,12 +2331,12 @@
             
             state.customMaterials.push(customMat);
             renderMaterialLibrary();
-            
-            // Add to mix automatically
-            // Determine derived price based on cost level
+
+            // Add to mix automatically with manual ratio control
             const costLevel = customMat.cost || 'Medium';
             const costPerKgUSD = COST_DATABASE[costLevel] || COST_DATABASE['Medium'];
             const derivedPrice = costPerKgUSD * 1000 * 0.71;
+            const storedPsd = getStoredPSD(customMat.name);
             const mat = {
                 id: materialIdCounter++,
                 name: customMat.name,
@@ -2249,7 +2346,7 @@
                 d50: customMat.d50,
                 fineness: customMat.fineness,
                 sieves: [...state.sieves],
-                psd: generatePSD(customMat.d50, customMat.fineness),
+                psd: storedPsd && Array.isArray(storedPsd) ? storedPsd : generatePSD(customMat.d50, customMat.fineness),
                 cost: customMat.cost,
                 price: derivedPrice,
                 currency: 'JOD',
@@ -2257,12 +2354,8 @@
                 notes: ''
             };
             state.selectedMaterials.push(mat);
-            redistributeRatios();
             renderSelectedMaterials();
-            updatePhysics();
-            calculateBatchCost();
-            checkBinderCompatibility();
-            updateWaterRatioProperties();
+            updateAfterRatioChange();
             document.body.removeChild(modalElement.closest('.modal-overlay'));
             showToast(`Custom material "${name}" added to library and mix!`, 'success');
         }
@@ -2270,16 +2363,19 @@
         function addMaterialFromLibrary(id) {
             const [category, idx] = id.split('_');
             let matSource;
-            
+
             if (category === 'binder') matSource = MATERIAL_DATABASE.binders[parseInt(idx)];
             else if (category === 'filler') matSource = MATERIAL_DATABASE.fillers[parseInt(idx)];
             else if (category === 'silica') matSource = MATERIAL_DATABASE.silica[parseInt(idx)];
             else if (category === 'aggregate') matSource = MATERIAL_DATABASE.aggregates[parseInt(idx)];
+            else if (category === 'polymer') matSource = (MATERIAL_DATABASE.polymers || [])[parseInt(idx)];
+            else if (category === 'fiber') matSource = (MATERIAL_DATABASE.fibers || [])[parseInt(idx)];
             else if (category === 'custom') matSource = state.customMaterials[parseInt(idx)];
             
             if (!matSource) return;
             
-            const psd = generatePSD(matSource.d50, matSource.fineness);
+            const stored = getStoredPSD(matSource.name);
+            const psd = stored && Array.isArray(stored) ? stored : generatePSD(matSource.d50, matSource.fineness);
             
             // Determine derived price if not provided
             const derivedPrice2 = (matSource.price !== undefined && matSource.price !== null) ? matSource.price : ((COST_DATABASE[matSource.cost] || COST_DATABASE['Medium']) * 1000 * 0.71);
@@ -2301,10 +2397,9 @@
             };
             
             state.selectedMaterials.push(material);
-            redistributeRatios();
             renderSelectedMaterials();
-            updatePhysics();
-            
+            updateAfterRatioChange();
+
             showToast(`Added ${matSource.name} to mix`, 'success');
         }
 
@@ -2341,8 +2436,10 @@
             const container = document.getElementById('selectedMaterials');
             container.innerHTML = state.selectedMaterials.map(mat => {
                 const typeClass = `type-${mat.category.toLowerCase()}`;
+                const isUpt = mat.name.trim().toUpperCase().startsWith('UPT');
+                const highlight = isUpt ? 'upt-highlight' : '';
                 return `
-                <div class="material-card ${typeClass}" style="border-left-color: ${mat.color}">
+                <div class="material-card ${typeClass} ${highlight}" style="border-left-color: ${mat.color}">
                     <div class="material-header">
                         <div style="font-size: 0.85rem; font-weight: 600;">${mat.name}
                             <span class="tooltip">
@@ -2357,7 +2454,7 @@
                             </span>
                         </div>
                         <div>
-                            <button class="btn-small" onclick="showMaterialPSDEditor(${mat.id})" 
+                            <button class="btn-small" onclick="showMaterialPSDEditor(${mat.id})"
                                     style="margin-right: 0.5rem; background: var(--purple); color: white;">
                                 Edit PSD
                             </button>
@@ -2365,9 +2462,15 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Ratio: <span class="mono" style="color: ${mat.color}">${mat.ratio.toFixed(1)}%</span></label>
-                        <input type="range" min="0" max="100" step="0.1" value="${mat.ratio}"
-                               oninput="updateMaterialRatio(${mat.id}, this.value)">
+                        <label>Ratio: <span class="mono" style="color: ${mat.color}">${mat.ratio.toFixed(2)}%</span></label>
+                        <div class="ratio-controls">
+                            <input type="range" min="0" max="100" step="0.01" value="${mat.ratio}"
+                                   oninput="updateMaterialRatio(${mat.id}, this.value)">
+                            <input type="number" min="0" max="100" step="0.01" value="${mat.ratio.toFixed(2)}" id="ratio-input-${mat.id}"
+                                   oninput="updateMaterialRatio(${mat.id}, this.value)"
+                                   onpaste="handleRatioPaste(event, ${mat.id})"
+                                   onkeydown="handleRatioKey(event, ${mat.id})">
+                        </div>
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;">
                         ${mat.category} | D50: ${mat.d50}µm | Fineness: ${mat.fineness}%
@@ -2681,19 +2784,23 @@
             let materialCost = 0;
             let additiveCost = 0;
             let totalCost = 0;
-            
+            const fractions = getRatioFractions();
+
             // Calculate material costs
-            state.selectedMaterials.forEach(mat => {
-                const ratio = mat.ratio / 100;
-                const weight = totalWeight * ratio;
+            state.selectedMaterials.forEach((mat, idx) => {
+                const weight = totalWeight * fractions[idx];
                 const costPerKg = COST_DATABASE[mat.cost] || COST_DATABASE['Medium'];
                 materialCost += weight * costPerKg;
             });
-            
+
             // Calculate additive costs (based on cement weight)
             const cementWeight = state.selectedMaterials
-                .filter(m => m.category === 'Binder')
-                .reduce((sum, m) => sum + (m.ratio / 100 * totalWeight), 0);
+                .reduce((sum, m, idx) => {
+                    if (m.category === 'Binder') {
+                        return sum + (fractions[idx] * totalWeight);
+                    }
+                    return sum;
+                }, 0);
             
             state.additives.forEach(add => {
                 const dosage = add.dosage / 100;
@@ -2739,9 +2846,8 @@
                             <th style="padding: 0.5rem; text-align: right;">Cost ($)</th>
                             <th style="padding: 0.5rem; text-align: right;">% of Total</th>
                         </tr>
-                        ${state.selectedMaterials.map(mat => {
-                            const ratio = mat.ratio / 100;
-                            const weight = totalWeight * ratio;
+                        ${state.selectedMaterials.map((mat, idx) => {
+                            const weight = totalWeight * fractions[idx];
                             const costPerKg = COST_DATABASE[mat.cost] || COST_DATABASE['Medium'];
                             const cost = weight * costPerKg;
                             const percent = (cost / totalCost) * 100;
@@ -2838,13 +2944,13 @@
             if (state.selectedMaterials.length === 0) {
                 return state.sieves.map(() => 0);
             }
-            return state.sieves.map(sieve => {
-                return state.selectedMaterials.reduce((sum, mat) => {
-                    const ratio = mat.ratio || 0;
-                    const passing = mat.customPSD ? 
+            const fractions = getRatioFractions();
+            return state.sieves.map((sieve, idxS) => {
+                return state.selectedMaterials.reduce((sum, mat, matIdx) => {
+                    const passing = mat.customPSD ?
                         mat.customPSD[state.sieves.indexOf(sieve)] || 0 :
                         approximateMaterialPSD(mat, sieve);
-                    return sum + (ratio / 100) * passing;
+                    return sum + fractions[matIdx] * passing;
                 }, 0);
             });
         }
@@ -2869,7 +2975,7 @@
             state.chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: state.sieves.map(s => s + ' mm'),
+                    labels: state.sieves.map(formatSieveLabel),
                     datasets: [
                         {
                             label: 'Ideal A&A Curve',
@@ -2925,7 +3031,7 @@
             if (!state.chart) return;
             const ideal = calculateIdealCurve();
             const actual = calculateActualCurve();
-            state.chart.data.labels = state.sieves.map(s => s + ' mm');
+            state.chart.data.labels = state.sieves.map(formatSieveLabel);
             state.chart.data.datasets[0].data = ideal;
             state.chart.data.datasets[1].data = actual;
             state.chart.update();
@@ -2978,53 +3084,57 @@
         function updateMaterialRatio(id, value) {
             const idx = state.selectedMaterials.findIndex(m => m.id === id);
             if (idx === -1) return;
-            
-            const mats = state.selectedMaterials;
-            const count = mats.length;
+
             let newVal = Math.max(0, parseFloat(value));
             if (isNaN(newVal)) newVal = 0;
-            
-            if (count === 1) {
-                mats[0].ratio = 100;
-            } else {
-                let flexIndex = -1;
-                for (let i = count - 1; i >= 0; i--) {
-                    if (i === idx) continue;
-                    const matCat = (mats[i].category || '').toLowerCase();
-                    if (matCat !== 'binder') {
-                        flexIndex = i;
-                        break;
-                    }
-                }
-                
-                if (flexIndex === -1) {
-                    flexIndex = (idx === count - 1) ? count - 2 : count - 1;
-                }
-                
-                let sumFixed = 0;
-                for (let i = 0; i < count; i++) {
-                    if (i !== idx && i !== flexIndex) {
-                        sumFixed += mats[i].ratio;
-                    }
-                }
-                
-                const maxAllowed = 100 - sumFixed;
-                if (newVal > maxAllowed) {
-                    newVal = maxAllowed;
-                }
-                
-                const leftover = 100 - newVal - sumFixed;
-                mats[idx].ratio = newVal;
-                mats[flexIndex].ratio = Math.max(0, leftover);
-            }
-            
+
+            state.selectedMaterials[idx].ratio = newVal;
             renderSelectedMaterials();
+            updateAfterRatioChange();
+        }
+
+        function handleRatioPaste(event, id) {
+            const text = event.clipboardData ? event.clipboardData.getData('text') : '';
+            if (!text) return;
+            event.preventDefault();
+            const numbers = text.split(/\s+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+            if (!numbers.length) return;
+            const startIndex = state.selectedMaterials.findIndex(m => m.id === id);
+            numbers.forEach((num, offset) => {
+                const target = state.selectedMaterials[startIndex + offset];
+                if (target) target.ratio = Math.max(0, num);
+            });
+            renderSelectedMaterials();
+            updateAfterRatioChange();
+        }
+
+        function handleRatioKey(event, id) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const idx = state.selectedMaterials.findIndex(m => m.id === id);
+                const next = state.selectedMaterials[idx + 1];
+                if (next) {
+                    const input = document.getElementById(`ratio-input-${next.id}`);
+                    if (input) input.focus();
+                }
+            }
+        }
+
+        function updateAfterRatioChange() {
             updateChart();
             updateSmartSuggestions();
             updatePhysics();
             calculateBatchCost();
             checkBinderCompatibility();
             updateWaterRatioProperties();
+        }
+
+        function getRatioFractions() {
+            const total = state.selectedMaterials.reduce((sum, m) => sum + (parseFloat(m.ratio) || 0), 0);
+            if (total <= 0) {
+                return state.selectedMaterials.map(() => 0);
+            }
+            return state.selectedMaterials.map(m => (parseFloat(m.ratio) || 0) / total);
         }
 
         function removeMaterial(id) {
@@ -3260,7 +3370,7 @@
             
             let rmseCurrent = Infinity;
             if (state.selectedMaterials.every(mat => typeof mat.ratio === 'number')) {
-                const currentWeights = state.selectedMaterials.map(mat => (mat.ratio || 0) / 100);
+                const currentWeights = getRatioFractions();
                 const currentMix = new Array(sievesCount).fill(0);
                 for (let i = 0; i < mCount; i++) {
                     const psd = materialPSDs[i];
@@ -3400,8 +3510,9 @@
                 } else {
                     value = approximateMaterialPSD(mat, sieve);
                 }
+                const sieveLabel = sieve < 1 ? `${(sieve * 1000).toFixed(0)} µm` : `${sieve} mm`;
                 html += `<label style="display:flex; align-items:center; margin-bottom:0.5rem; font-size:0.9rem;">
-                    <span style="width: 80px;">${sieve} mm:</span>
+                    <span style="width: 80px;">${sieveLabel}:</span>
                     <input type="number" min="0" max="100" step="0.1" value="${value.toFixed(1)}" data-index="${i}" style="flex:1; padding:0.3rem; background: var(--bg-input); color: var(--text); border: 1px solid var(--cyan); border-radius: 4px;">
                 </label>`;
             });
@@ -3423,11 +3534,12 @@
                     customPSD.push(isNaN(val) ? 0 : val);
                 });
                 mat.customPSD = customPSD;
+                savePSDProfile(mat.name, customPSD);
                 document.body.removeChild(modal);
                 updatePhysics();
                 updateChart();
                 updateSmartSuggestions();
-                showToast(`PSD for ${mat.name} updated.`, 'success');
+                showToast(`PSD for ${mat.name} updated and saved.`, 'success');
             };
             
             modal.querySelector('#cancelPsdBtn').onclick = () => {
@@ -3465,7 +3577,7 @@
             for (let i = 0; i < sieves.length; i++) {
                 const diff = (actual[i] - ideal[i]);
                 html += `<tr>
-                            <td style="padding:0.3rem 0;">${sieves[i]}</td>
+                        <td style="padding:0.3rem 0;">${formatSieveLabel(sieves[i])}</td>
                             <td style="padding:0.3rem 0; text-align:right;">${ideal[i].toFixed(1)}</td>
                             <td style="padding:0.3rem 0; text-align:right;">${actual[i].toFixed(1)}</td>
                             <td style="padding:0.3rem 0; text-align:right; color: ${diff >= 0 ? 'var(--orange)' : 'var(--green)'};">${diff.toFixed(1)}</td>
@@ -3491,7 +3603,7 @@
             Object.values(MATERIAL_DATABASE).forEach(list => {
                 if (!Array.isArray(list)) return;
                 list.forEach(mat => {
-                    if (mat.price === undefined || mat.price === null) {
+                    if (mat.price === undefined) {
                         const level = mat.cost || 'Medium';
                         const costPerKgUSD = COST_DATABASE[level] || COST_DATABASE['Medium'];
                         const pricePerTonJOD = costPerKgUSD * 1000 * usdToJod;
@@ -3502,6 +3614,33 @@
                     if (!mat.notes) mat.notes = '';
                 });
             });
+        }
+
+        function loadStoredPSDProfiles() {
+            try {
+                const saved = localStorage.getItem('masterformulator_psd_profiles');
+                if (saved) {
+                    storedPSDProfiles = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.warn('Unable to load stored PSD profiles', e);
+                storedPSDProfiles = {};
+            }
+        }
+
+        function savePSDProfile(name, psd) {
+            if (!name || !Array.isArray(psd)) return;
+            storedPSDProfiles[name] = { psd, sieves: [...state.sieves], updated: new Date().toISOString() };
+            localStorage.setItem('masterformulator_psd_profiles', JSON.stringify(storedPSDProfiles));
+        }
+
+        function getStoredPSD(name) {
+            const entry = storedPSDProfiles[name];
+            if (!entry) return null;
+            if (!Array.isArray(entry.sieves)) return null;
+            if (entry.sieves.length !== state.sieves.length) return null;
+            const sameGrid = entry.sieves.every((s, i) => Math.abs(s - state.sieves[i]) < 1e-6);
+            return sameGrid ? entry.psd : null;
         }
 
         function loadCustomMaterials() {
@@ -3550,11 +3689,11 @@
 
         function calculateBatchCost() {
             let totalCostPerTon = 0;
+            const fractions = getRatioFractions();
             if (state.selectedMaterials.length > 0) {
-                state.selectedMaterials.forEach(mat => {
-                    const fraction = (mat.ratio || 0) / 100;
+                state.selectedMaterials.forEach((mat, idx) => {
                     const price = mat.price !== undefined ? mat.price : ((COST_DATABASE[mat.cost] || COST_DATABASE['Medium']) * 1000 * 0.71);
-                    totalCostPerTon += fraction * price;
+                    totalCostPerTon += fractions[idx] * price;
                 });
             }
             state.costPerTon = totalCostPerTon;
@@ -3963,11 +4102,12 @@
             });
             rows.sort((a,b) => a.name.localeCompare(b.name));
             rows.forEach(mat => {
+                const displayPrice = (mat.price === undefined || mat.price === null) ? '' : mat.price;
                 html += `<tr style="border-bottom:1px solid var(--bg-input);">
                     <td style="padding:0.4rem;">${mat.name}</td>
                     <td style="padding:0.4rem;">${mat.category}</td>
-                    <td style="padding:0.4rem; text-align:right;"><input type="number" data-mat-name="${mat.name}" value="${mat.price}" min="0" step="0.1" style="width:80px; background: var(--bg-input); color: var(--text); border:1px solid var(--cyan); border-radius:4px;"></td>
-                    <td style="padding:0.4rem; text-align:right;">${mat.lastUpdated}</td>
+                    <td style="padding:0.4rem; text-align:right;"><input type="number" data-mat-name="${mat.name}" value="${displayPrice}" min="0" step="0.1" style="width:80px; background: var(--bg-input); color: var(--text); border:1px solid var(--cyan); border-radius:4px;"></td>
+                    <td style="padding:0.4rem; text-align:right;">${mat.lastUpdated || '-'}</td>
                 </tr>`;
             });
             html += '</table>';
@@ -4267,17 +4407,21 @@
             const totalWeight = 1000;
             let materialCost = 0;
             let additiveCost = 0;
-            
-            state.selectedMaterials.forEach(mat => {
-                const ratio = mat.ratio / 100;
-                const weight = totalWeight * ratio;
+            const fractions = getRatioFractions();
+
+            state.selectedMaterials.forEach((mat, idx) => {
+                const weight = totalWeight * fractions[idx];
                 const costPerKg = COST_DATABASE[mat.cost] || COST_DATABASE['Medium'];
                 materialCost += weight * costPerKg;
             });
-            
+
             const cementWeight = state.selectedMaterials
-                .filter(m => m.category === 'Binder')
-                .reduce((sum, m) => sum + (m.ratio / 100 * totalWeight), 0);
+                .reduce((sum, m, idx) => {
+                    if (m.category === 'Binder') {
+                        return sum + (fractions[idx] * totalWeight);
+                    }
+                    return sum;
+                }, 0);
             
             state.additives.forEach(add => {
                 const dosage = add.dosage / 100;
@@ -4472,18 +4616,18 @@
                                 <th>Fineness (%)</th>
                                 <th>Cost Level</th>
                             </tr>
-                            ${state.selectedMaterials.map((m, idx) => `
-                                <tr>
-                                    <td>${idx + 1}</td>
-                                    <td>${m.name}</td>
-                                    <td>${m.category}</td>
-                                    <td>${m.ratio.toFixed(2)}</td>
-                                    <td>${(1000 * m.ratio / 100).toFixed(2)}</td>
-                                    <td>${m.d50}</td>
-                                    <td>${m.fineness}</td>
-                                    <td>${m.cost || 'Medium'}</td>
-                                </tr>
-                            `).join('')}
+                              ${state.selectedMaterials.map((m, idx) => `
+                                  <tr>
+                                      <td>${idx + 1}</td>
+                                      <td>${m.name}</td>
+                                      <td>${m.category}</td>
+                                      <td>${m.ratio.toFixed(2)}</td>
+                                      <td>${(1000 * fractions[idx]).toFixed(2)}</td>
+                                      <td>${m.d50}</td>
+                                      <td>${m.fineness}</td>
+                                      <td>${m.cost || 'Medium'}</td>
+                                  </tr>
+                              `).join('')}
                             <tr style="font-weight: bold; background: #f0f0f0;">
                                 <td colspan="3">TOTAL DRY MIX</td>
                                 <td>${state.selectedMaterials.reduce((s, m) => s + m.ratio, 0).toFixed(2)}</td>
@@ -4542,8 +4686,7 @@
                                     purpose = 'Special functional additive';
                                 }
                                 const cementWeight = state.selectedMaterials
-                                    .filter(m => m.category === 'Binder')
-                                    .reduce((sum, m) => sum + (m.ratio / 100 * 1000), 0);
+                                    .reduce((sum, m, idx) => m.category === 'Binder' ? sum + (fractions[idx] * 1000) : sum, 0);
                                 const additiveWeight = cementWeight * (a.dosage / 100);
                                 return `
                                 <tr>
@@ -4577,12 +4720,11 @@
                                 <th>Total Cost ($)</th>
                                 <th>% of Total</th>
                             </tr>
-                            ${state.selectedMaterials.map(m => {
-                                const ratio = m.ratio / 100;
-                                const weight = 1000 * ratio;
-                                const costPerKg = COST_DATABASE[m.cost] || COST_DATABASE['Medium'];
-                                const cost = weight * costPerKg;
-                                const percent = (cost / totalCost) * 100;
+                              ${state.selectedMaterials.map((m, idx) => {
+                                  const weight = 1000 * fractions[idx];
+                                  const costPerKg = COST_DATABASE[m.cost] || COST_DATABASE['Medium'];
+                                  const cost = weight * costPerKg;
+                                  const percent = (cost / totalCost) * 100;
                                 return `
                                 <tr>
                                     <td>${m.name}</td>
@@ -4593,13 +4735,12 @@
                                 </tr>
                                 `;
                             }).join('')}
-                            ${state.additives.map(a => {
-                                const cementWeight = state.selectedMaterials
-                                    .filter(m => m.category === 'Binder')
-                                    .reduce((sum, m) => sum + (m.ratio / 100 * 1000), 0);
-                                const weight = cementWeight * (a.dosage / 100);
-                                const costPerKg = COST_DATABASE[a.cost] || COST_DATABASE['Medium'];
-                                const cost = weight * costPerKg;
+                              ${state.additives.map(a => {
+                                  const cementWeight = state.selectedMaterials
+                                      .reduce((sum, m, idx) => m.category === 'Binder' ? sum + (fractions[idx] * 1000) : sum, 0);
+                                  const weight = cementWeight * (a.dosage / 100);
+                                  const costPerKg = COST_DATABASE[a.cost] || COST_DATABASE['Medium'];
+                                  const cost = weight * costPerKg;
                                 const percent = (cost / totalCost) * 100;
                                 return `
                                 <tr>
